@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <key>Label</key>
+    <string>com.businessmemory.imessage-monitor</string>
+
+    <key>ProgramArguments</key>
+    <array>
+      <string>__PYTHON_BIN__</string>
+      <string>__SCRIPT_PATH__</string>
+      <string>--once</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>__WORKING_DIR__</string>
+
+    <!-- Do NOT auto-start a heavy loop on login -->
+    <key>RunAtLoad</key>
+    <false/>
+
+    <key>KeepAlive</key>
+    <false/>
+
+    <!-- Short-lived process every 3 minutes: import up to 5 msgs, then exit -->
+    <key>StartInterval</key>
+    <integer>180</integer>
+
+    <key>StandardOutPath</key>
+    <string>/Users/REPLACE_USERNAME/.business-memory-imessage/monitor.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/REPLACE_USERNAME/.business-memory-imessage/monitor.error.log</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+      <key>PATH</key>
+      <string>/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    </dict>
+  </dict>
+</plist>

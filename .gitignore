@@ -30,6 +30,7 @@ yarn-error.log*
 
 # env files
 .env*.local
+scripts/imessage-monitor/config.env
 
 # vercel
 .vercel
