@@ -43,10 +43,14 @@ export async function POST(request: NextRequest) {
   const context = (notes as any[])
   .map(
     (note, i) =>
-      `[Note ${i + 1}] ID: ${note.id}\nTitle: ${note.title}\nTags: ${(note.tags ?? []).join(", ")}`
+      `[Note ${i + 1}]
+ID: ${note.id}
+Title: ${note.title}
+Tags: ${(note.tags ?? []).join(", ")}
+Content:
+${note.content}`
   )
   .join("\n\n---\n\n");
-
   const openai = new OpenAI({ apiKey });
 
   const completion = await openai.chat.completions.create({
