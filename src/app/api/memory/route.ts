@@ -30,12 +30,12 @@ export async function POST(request: NextRequest) {
   }
 
   const { data, error } = await supabase
-    .from("business_memory")
-    .insert({
-      title: title.trim(),
-      content: content.trim(),
-      tags: Array.isArray(tags) ? tags : [],
-    })
+  .from("business_memory")
+  .insert({
+    title: title.trim(),
+    content: content.trim(),
+    tags: Array.isArray(tags) ? tags : [],
+  } as any) 
     .select()
     .single();
 
