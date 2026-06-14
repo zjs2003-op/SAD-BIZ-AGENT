@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
       `[Note ${i + 1}] ID: ${note.id}\nTitle: ${note.title}\nTags: ${(note.tags ?? []).join(", ")}`
   )
   .join("\n\n---\n\n");
-  
+
   const openai = new OpenAI({ apiKey });
 
   const completion = await openai.chat.completions.create({
@@ -70,7 +70,7 @@ ${context}`,
     completion.choices[0]?.message?.content ??
     "Sorry, I couldn't generate an answer.";
 
-  const citedSources = notes
+    const citedSources = (notes as any[])
     .filter((note) =>
       answer.toLowerCase().includes(note.title.toLowerCase())
     )
