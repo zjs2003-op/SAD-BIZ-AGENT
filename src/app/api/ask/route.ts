@@ -79,7 +79,7 @@ ${context}`,
   const sources =
     citedSources.length > 0
       ? citedSources
-      : notes.slice(0, 3).map((n) => ({ id: n.id, title: n.title }));
+      : (notes as any[]).slice(0, 3).map((n) => ({ id: n.id, title: n.title }));
 
   return NextResponse.json({ answer, sources });
 }
