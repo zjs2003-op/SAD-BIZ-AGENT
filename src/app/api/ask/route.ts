@@ -1,89 +1,83 @@
 import { createServerClient } from "@/lib/supabase/server";
+import {
+  buildNotesContext,
+  resolveSources,
+  selectNotesForQuestion,
+} from "@/lib/ask-search";
 import OpenAI from "openai";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {
-  const apiKey = process.env.OPENAI_API_KEY;
+  try {
+    const apiKey = process.env.OPENAI_API_KEY;
 
-  if (!apiKey) {
-    return NextResponse.json(
-      { error: "OPENAI_API_KEY is not configured" },
-      { status: 500 }
-    );
-  }
+    if (!apiKey) {
+      return NextResponse.json(
+        { error: "OPENAI_API_KEY is not configured" },
+        { status: 500 }
+      );
+    }
 
-  const { question } = await request.json();
+    const body = await request.json();
+    const question = body?.question;
 
-  if (!question?.trim()) {
-    return NextResponse.json(
-      { error: "Question is required" },
-      { status: 400 }
-    );
-  }
+    if (!question?.trim()) {
+      return NextResponse.json(
+        { error: "Question is required" },
+        { status: 400 }
+      );
+    }
 
-  const supabase = createServerClient();
+    const supabase = createServerClient();
+    const notes = await selectNotesForQuestion(supabase, question.trim());
 
-  const { data: notes, error } = await supabase
-    .from("business_memory")
-    .select("id, title, content, tags, created_at")
-    .order("created_at", { ascending: false });
+    if (notes.length === 0) {
+      return NextResponse.json({
+        answer:
+          "You don't have any notes yet. Add some business notes first, then I can help answer questions about them.",
+        sources: [],
+      });
+    }
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
+    const context = buildNotesContext(notes);
+    let answer =
+      "Sorry, I couldn't generate an answer. Please try again.";
 
-  if (!notes || notes.length === 0) {
-    return NextResponse.json({
-      answer:
-        "You don't have any notes yet. Add some business notes first, then I can help answer questions about them.",
-      sources: [],
-    });
-  }
+    try {
+      const openai = new OpenAI({ apiKey });
 
-  const context = (notes as any[])
-  .map(
-    (note, i) =>
-      `[Note ${i + 1}]
-ID: ${note.id}
-Title: ${note.title}
-Tags: ${(note.tags ?? []).join(", ")}
-Content:
-${note.content}`
-  )
-  .join("\n\n---\n\n");
-  const openai = new OpenAI({ apiKey });
-
-  const completion = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [
-      {
-        role: "system",
-        content: `You are a helpful business assistant. Answer questions based ONLY on the provided business notes. If the answer isn't in the notes, say so clearly. Be concise and cite which note titles you used. Here are the notes:
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: `You are a helpful business assistant. Answer questions based ONLY on the provided business notes. If the answer isn't in the notes, say so clearly. Be concise and cite which note titles you used. Here are the notes:
 
 ${context}`,
-      },
-      {
-        role: "user",
-        content: question.trim(),
-      },
-    ],
-    temperature: 0.3,
-  });
+          },
+          {
+            role: "user",
+            content: question.trim(),
+          },
+        ],
+        temperature: 0.3,
+      });
 
-  const answer =
-    completion.choices[0]?.message?.content ??
-    "Sorry, I couldn't generate an answer.";
+      answer =
+        completion.choices[0]?.message?.content?.trim() ??
+        "Sorry, I couldn't generate an answer. Please try again.";
+    } catch {
+      answer =
+        "Sorry, I couldn't reach OpenAI right now. Please try again in a moment.";
+    }
 
-    const citedSources = (notes as any[])
-    .filter((note) =>
-      answer.toLowerCase().includes(note.title.toLowerCase())
-    )
-    .map((note) => ({ id: note.id, title: note.title }));
+    const sources = resolveSources(notes, answer);
 
-  const sources =
-    citedSources.length > 0
-      ? citedSources
-      : (notes as any[]).slice(0, 3).map((n) => ({ id: n.id, title: n.title }));
+    return NextResponse.json({ answer, sources });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "An unexpected error occurred";
 
-  return NextResponse.json({ answer, sources });
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 }
